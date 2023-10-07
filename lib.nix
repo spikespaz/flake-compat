@@ -81,7 +81,7 @@ _: _: let
       outputs = flakeSrc // (flake.outputs ({ self = outputs; }));
     in outputs;
 
-  mkRootSrc = src:
+  mkRootSrc = doFetchGit: src:
     let
       # Try to clean the source tree by using fetchGit, if this source
       # tree is a valid git repository.
@@ -109,7 +109,13 @@ _: _: let
       isShallow = builtins.pathExists (src + "/.git/shallow");
     in
       { lastModified = 0; lastModifiedDate = _formatSecondsSinceEpoch 0; }
-        // (if src ? outPath then src else tryFetchGit src);
+        // (
+          if src ? outPath
+          then src
+          else if doFetchGit
+          then tryFetchGit src
+          else { outPath = src; }
+        );
 
   # Format number of seconds in the Unix epoch as %Y%m%d%H%M%S.
   _formatSecondsSinceEpoch = t:
