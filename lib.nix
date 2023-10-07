@@ -208,6 +208,22 @@ _: _: let
       )
       lockFile.nodes;
 
+    mkFlake = {
+      src,
+      lockFilePath ? src + "/flake.lock",
+      lockFile ? builtins.fromJSON (builtins.readFile lockFilePath),
+      doFetchGit ? false,
+      rootSrc ? mkRootSrc doFetchGit src,
+      allNodes ? mkAllNodes rootSrc lockFile,
+    }:
+      if !(builtins.pathExists lockFilePath)
+      then callLocklessFlake rootSrc
+      else if lockFile.version == 4
+      then callFlake4 rootSrc (lockFile.inputs)
+      else if lockFile.version >= 5 && lockFile.version <= 7
+      then allNodes.${lockFile.root}
+      else throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
+
   mkDefaultNix = system: flake:
     (builtins.removeAttrs flake ["__functor"])
       // (
@@ -234,6 +250,9 @@ _: _: let
       );
 in {
   fc = {
-    inherit fetchTree callFlake4 callLocklessFlake mkRootSrc mkAllNodes mkDefaultNix mkShellNix;
+    inherit
+      fetchTree callFlake4 callLocklessFlake
+      mkRootSrc mkAllNodes
+      mkFlake mkDefaultNix mkShellNix;
   };
 }

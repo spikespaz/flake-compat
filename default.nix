@@ -9,26 +9,8 @@
 
 let
   lib = (import ./lib.nix null null).fc;
-
-  lockFilePath = src + "/flake.lock";
-  lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
-
-  mkFlake = {
-    src,
-    doFetchGit ? false,
-    rootSrc ? lib.mkRootSrc doFetchGit src,
-    allNodes ? lib.mkAllNodes rootSrc lockFile,
-  }:
-    if !(builtins.pathExists lockFilePath)
-    then lib.callLocklessFlake rootSrc
-    else if lockFile.version == 4
-    then lib.callFlake4 rootSrc (lockFile.inputs)
-    else if lockFile.version >= 5 && lockFile.version <= 7
-    then allNodes.${lockFile.root}
-    else throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
-
-  flake = mkFlake { inherit src; doFetchGit = true; };
-  flakeSrc = mkFlake { inherit src; };
+  flake = lib.mkFlake { inherit src; doFetchGit = true; };
+  flakeSrc = lib.mkFlake { inherit src; };
 in
   {
     inherit flakeSrc;
